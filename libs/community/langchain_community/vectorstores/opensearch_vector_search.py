@@ -818,21 +818,15 @@ class OpenSearchVectorSearch(VectorStore):
         index_name = kwargs.get("index_name", self.index_name)
         if self.index_name is None:
             raise ValueError("index_name must be provided.")
-        try:
-            from opensearchpy.helpers import async_bulk
-        except ImportError:
-            raise ImportError(IMPORT_ASYNC_OPENSEARCH_PY_ERROR)
 
         actions = []
         for id_ in ids:
-            # Use the same format as sync version
             action = {"_op_type": "delete", "_index": index_name, "_id": id_}
             if self.routing:
                 action["_routing"] = self.routing
             actions.append(action)
 
-        await async_bulk(self.async_client, actions, **kwargs)
-        return True
+        response = await self.async_client.bulk(body=actions, **kwargs)
         return not any(
             item.get("delete", {}).get("error") for item in response["items"]
         )
